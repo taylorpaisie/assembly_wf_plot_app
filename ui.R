@@ -1,29 +1,22 @@
 library(shiny)
-library(ggplot2)
 library(DT)
-library(readxl)
 
-# Define the UI
-fluidPage(
-  titlePanel("Excel File Analysis with Graphs"),
-  
+ui <- fluidPage(
+  titlePanel("Excel File Upload and Plotting"),
   sidebarLayout(
     sidebarPanel(
-      fileInput("file", "Upload an Excel File",
+      fileInput("file", "Upload Excel File", 
                 accept = c(".xlsx", ".xls")),
-      uiOutput("sheet_selector"),  # Dropdown for sheet selection
-      uiOutput("x_var_selector"),  # Dropdown for x-variable
-      uiOutput("y_var_selector"),  # Dropdown for y-variable
-      selectInput("plot_type", "Select Plot Type:",
-                  choices = c("Scatter Plot", "Bar Chart", "Line Plot")),
-      helpText("Upload an Excel file and select a sheet to create visualizations.")
+      uiOutput("sheet_selector"),    # For selecting the sheet
+      uiOutput("x_axis_selector"),   # Dropdown for X axis
+      uiOutput("y_axis_selector"),   # Dropdown for Y axis
+      actionButton("plot", "Generate Plot")
     ),
     mainPanel(
       tabsetPanel(
-        tabPanel("Data Table", DTOutput("dataTable")),  # Display data
-        tabPanel("Graph", plotOutput("plot"))           # Display plot
+        tabPanel("Table Preview", dataTableOutput("data_table")),
+        tabPanel("Plot", plotOutput("data_plot"))
       )
     )
   )
 )
-

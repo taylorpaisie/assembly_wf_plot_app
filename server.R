@@ -1,69 +1,69 @@
 library(shiny)
+library(readxl)
 library(ggplot2)
 library(DT)
-library(readxl)
+library(janitor) # Optional: For cleaning column names
 
-
-function(input, output, session) {
+server <- function(input, output, session) {
   
-  # Reactive to store sheet names
-  sheet_names <- reactive({
+  # Reactive: Load Excel file
+  excel_data <- reactive({
     req(input$file)
-    excel_sheets(input$file$datapath)
+    validate(
+      need(tools::file_ext(input$file$name) %in% c("xls", "xlsx"), 
+           "Please upload a valid Excel file.")
+    )
+    # Read the first sheet by default
+    readxl::read_excel(input$file$datapath, sheet = 1)
   })
   
-  # Dynamic UI for sheet selection
+  # Dynamically update sheet names if Excel contains multiple sheets
   output$sheet_selector <- renderUI({
-    req(sheet_names())
-    selectInput("sheet", "Select Sheet:", choices = sheet_names())
+    req(input$file)
+    sheets <- readxl::excel_sheets(input$file$datapath)
+    selectInput("sheet", "Select Sheet:", choices = sheets)
   })
   
-  # Reactive to read data from the selected sheet
-  data <- reactive({
+  # Reactive: Get data for the selected sheet
+  sheet_data <- reactive({
     req(input$file, input$sheet)
-    read_excel(input$file$datapath, sheet = input$sheet)
+    data <- readxl::read_excel(input$file$datapath, sheet = input$sheet)
+    # Optional: Clean column names for easier handling
+    janitor::clean_names(data)
   })
   
-  # Dynamic UI for x-variable selection
-  output$x_var_selector <- renderUI({
-    req(data())
-    selectInput("x_var", "Select X Variable:", choices = names(data()))
+  # Dynamically update column names for X-axis and Y-axis selection
+  output$x_axis_selector <- renderUI({
+    req(sheet_data())
+    selectInput("x_col", "Select X-Axis (categorical):", choices = names(sheet_data()))
   })
   
-  # Dynamic UI for y-variable selection
-  output$y_var_selector <- renderUI({
-    req(data())
-    selectInput("y_var", "Select Y Variable:", choices = names(data()))
+  output$y_axis_selector <- renderUI({
+    req(sheet_data())
+    selectInput("y_col", "Select Y-Axis (numeric):", choices = names(sheet_data()))
   })
   
-  # Render the data table
-  output$dataTable <- renderDT({
-    req(data())
-    datatable(data())
+  # Display the data table preview
+  output$data_table <- renderDataTable({
+    req(sheet_data())
+    datatable(sheet_data(), options = list(pageLength = 5))
   })
   
-  # Render the plot
-  output$plot <- renderPlot({
-    req(data(), input$x_var, input$y_var, input$plot_type)
+  # Plot the data as a colorful bar plot
+  output$data_plot <- renderPlot({
+    req(sheet_data(), input$x_col, input$y_col, input$plot)
     
-    # Prepare the data
-    plot_data <- data()
+    # Get the data
+    data <- sheet_data()
     
-    # Create the plot based on the selected type
-    p <- ggplot(plot_data, aes_string(x = input$x_var, y = input$y_var))
-    
-    if (input$plot_type == "Scatter Plot") {
-      p <- p + geom_point()
-    } else if (input$plot_type == "Bar Chart") {
-      p <- p + geom_bar(stat = "identity")
-    } else if (input$plot_type == "Line Plot") {
-      p <- p + geom_line()
-    }
-    
-    # Customize plot
-    p + theme_minimal() +
-      labs(title = paste(input$plot_type, "of", input$y_var, "vs", input$x_var),
-           x = input$x_var,
-           y = input$y_var)
+    # Use backticks for column names to handle special characters
+    ggplot(data, aes_string(x = paste0("`", input$x_col, "`"), 
+                            y = paste0("`", input$y_col, "`"), 
+                            fill = paste0("`", input$x_col, "`"))) +
+      geom_bar(stat = "identity") +
+      scale_fill_brewer(palette = "Set3") + # Use a pre-defined colorful palette
+      labs(title = "Colorful Bar Plot", x = input$x_col, y = input$y_col) +
+      theme_minimal() +
+      theme(legend.position = "none") # Hide the legend for simplicity
   })
 }
