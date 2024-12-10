@@ -61,7 +61,7 @@ server <- function(input, output, session) {
                             y = paste0("`", input$y_col, "`"), 
                             fill = paste0("`", input$x_col, "`"))) +
       geom_bar(stat = "identity") +
-      scale_fill_brewer(palette = "Set3") + # Use a pre-defined colorful palette
+      scale_fill_brewer(palette = "Dark2") + # Use a pre-defined colorful palette
       labs(title = "Colorful Bar Plot", x = input$x_col, y = input$y_col) +
       theme_minimal() +
       theme(legend.position = "none") # Hide the legend for simplicity
